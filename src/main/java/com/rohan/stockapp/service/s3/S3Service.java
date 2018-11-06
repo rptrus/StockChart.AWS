@@ -21,7 +21,7 @@ public class S3Service {
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
-	AmazonClient amazonClient;
+	private AmazonClient amazonClient;
 		
 	public boolean uploadToS3(String key, File file) {
 		boolean status = true;		

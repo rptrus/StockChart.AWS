@@ -19,11 +19,16 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.labels.CategoryItemLabelGenerator;
+import org.jfree.chart.labels.ItemLabelAnchor;
+import org.jfree.chart.labels.ItemLabelPosition;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.CombinedDomainCategoryPlot;
 import org.jfree.chart.renderer.category.AbstractCategoryItemRenderer;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.DefaultPieDataset;
@@ -124,6 +129,10 @@ public class ChartConstruction {
               
               document.close();
               
+              Random r = new Random(System.currentTimeMillis());
+              String key = String.valueOf(r.nextInt(1000));
+              s3Service.uploadToS3(String.format("%s_%s", key, f.getName()), f);
+              
               logger.info("Document now closed.");
         } catch (Exception ex) {
         	logger.error("Exception! ",ex);
@@ -160,7 +169,7 @@ public class ChartConstruction {
 	}
 	
 	private JFreeChart createPerformanceGraph(List<StockReportElement> stockList) {
-        final CategoryDataset dataset1 = createDatasetCHCPercentage(stockList);
+        final CategoryDataset dataset1 = createDatasetPercentage(stockList);
         final NumberAxis rangeAxis1 = new NumberAxis("Performance");
         rangeAxis1.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
         AbstractCategoryItemRenderer renderer1 = new BarRenderer();
@@ -168,27 +177,43 @@ public class ChartConstruction {
         final CategoryPlot subplot1 = new CategoryPlot(dataset1, null, rangeAxis1, renderer1);
         subplot1.setDomainGridlinesVisible(true);
         ValueAxis yAxis =subplot1.getRangeAxis();
-        yAxis.setRange(0, 100);
+        //yAxis.setRange(0, 100);
         ((BarRenderer) subplot1.getRenderer()).setBarPainter(new StandardBarPainter());
-        BarRenderer barrenderer1 = (BarRenderer)subplot1.getRenderer();
-        barrenderer1.setMaximumBarWidth(0.085f);
+        //BarRenderer barrenderer1 = (BarRenderer)subplot1.getRenderer();
+        ((BarRenderer) subplot1.getRenderer()).setMaximumBarWidth(0.085f);
         renderer1.setSeriesPaint(0, new Color(ReportColors.COOLBLUE.getReportColor()));
         
-        final CategoryDataset dataset2 = createDatasetCHCAmount(stockList);
-        final NumberAxis rangeAxis2 = new NumberAxis("Holding Amt");             
+        final CategoryDataset dataset2 = createDatasetAmount(stockList);
+        final NumberAxis rangeAxis2 = new NumberAxis("Holding Amt"); 
         rangeAxis2.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-        final BarRenderer renderer2 = new BarRenderer();
+        //rangeAxis2.setRange(0,500);
+        final BarRenderer renderer2 = new BarRenderer();        
         final CategoryPlot subplot2 = new CategoryPlot(dataset2, null, rangeAxis2, renderer2);
         subplot2.setDomainGridlinesVisible(true);
         ((BarRenderer) subplot2.getRenderer()).setBarPainter(new StandardBarPainter());
-        BarRenderer barrenderer2 = (BarRenderer)subplot2.getRenderer();
-        barrenderer2.setMaximumBarWidth(0.085f);
+        //BarRenderer barrenderer2 = (BarRenderer)subplot2.getRenderer();
+        ((BarRenderer) subplot2.getRenderer()).setMaximumBarWidth(0.085f);                
 
-        final CategoryAxis domainAxis = new CategoryAxis("Currency");
+        final CategoryAxis domainAxis = new CategoryAxis("Stock Code");
         
         domainAxis.setTickLabelPaint(Color.BLACK);
         domainAxis.setTickLabelFont(smallVerdana);
         renderer2.setSeriesPaint(0, new Color(ReportColors.GREEN.getReportColor()));
+        
+        // new stuff
+//        renderer2.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+//        renderer2.setDefaultItemLabelsVisible(true);
+//        ItemLabelPosition position = new ItemLabelPosition(ItemLabelAnchor.INSIDE10, 
+//                TextAnchor.BASELINE_CENTER);
+//        renderer2.setDefaultNegativeItemLabelPosition(position);
+        
+        CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator();
+        renderer2.setSeriesItemLabelGenerator(0, generator);
+        renderer2.setSeriesItemLabelsVisible(0, true);
+        renderer2.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER,TextAnchor.BASELINE_CENTER));
+        //renderer2.setSeriesItemLabelFont(0, new java.awt.Font("Arial", 20, Font.BOLD), false);
+        //renderer2.setDefaultItemLabelFont(new java.awt.Font("Arial", 20, Font.BOLD));
+        renderer2.setItemLabelAnchorOffset(10);
         
         final CombinedDomainCategoryPlot plot = new  CombinedDomainCategoryPlot(domainAxis);
 
@@ -232,7 +257,7 @@ public class ChartConstruction {
 	      return chart;
 	  }
 	
-    public CategoryDataset createDatasetCHCPercentage(List<StockReportElement> stockList) {
+    public CategoryDataset createDatasetPercentage(List<StockReportElement> stockList) {
           final DefaultCategoryDataset result = 
           new DefaultCategoryDataset();
           final String rowKey = "Increase %";
@@ -250,13 +275,13 @@ public class ChartConstruction {
         return result;
     }
     
-    public CategoryDataset createDatasetCHCAmount(List<StockReportElement> stockList) {
+    public CategoryDataset createDatasetAmount(List<StockReportElement> stockList) {
           final DefaultCategoryDataset result = new DefaultCategoryDataset();
           final String rowKey = "Equity held";
           
           for (StockReportElement aStockReportElement: stockList) {
         	  result.addValue(
-        			  aStockReportElement.getCurrentPrice().doubleValue(), 
+        			  aStockReportElement.getCurrentPrice().doubleValue()*aStockReportElement.getNumberOfUnits(), 
         			  rowKey, 
         			  aStockReportElement.getCode()
         			  );
@@ -267,10 +292,11 @@ public class ChartConstruction {
 	  
 	  private PdfPTable stockStatsTable(List<StockReportElement> stockList) throws ParseException
 	    {
-	        float[] columnWidths = {3.5f, 2f, 2f, 2f, 2f};
+	        float[] columnWidths = {1.5f, 1.5f, 2f, 2f, 2f, 2f};
 	           PdfPTable table = new PdfPTable(columnWidths);
 	           table.setWidthPercentage(100f);
 	           insertCell(table, "Code: ", Element.ALIGN_LEFT, 1, bfBold12, Boolean.TRUE);
+	           insertCell(table, "Units: ", Element.ALIGN_RIGHT, 1, bfBold12, Boolean.TRUE);
 	           insertCell(table, "Acquired Price", Element.ALIGN_RIGHT, 1, bfBold12, Boolean.TRUE);
 	           insertCell(table, "Current Price", Element.ALIGN_RIGHT, 1, bfBold12, Boolean.TRUE);
 	           insertCell(table, "Movement (price)", Element.ALIGN_RIGHT, 1, bfBold12, Boolean.TRUE);
@@ -280,7 +306,8 @@ public class ChartConstruction {
 	    }
 	  
 	  private void addStock(PdfPTable table, StockReportElement stock) {
-          insertCell(table, stock.getCode(), Element.ALIGN_LEFT, 1, bfNormal);           
+          insertCell(table, stock.getCode(), Element.ALIGN_LEFT, 1, bfNormal);
+          insertCell(table, stock.getNumberOfUnits().toString(), Element.ALIGN_RIGHT, 1, bfNormal);
           insertCell(table, stock.getAcquiredPrice().setScale(2,RoundingMode.HALF_UP).toString(), Element.ALIGN_RIGHT, 1, bfNormal);
           insertCell(table, stock.getCurrentPrice().setScale(2,RoundingMode.HALF_UP).toString(), Element.ALIGN_RIGHT, 1, bfNormal);
           insertCell(table, stock.getCurrentPrice().subtract(stock.getAcquiredPrice()).setScale(2, RoundingMode.HALF_EVEN)+"", Element.ALIGN_RIGHT, 1, bfNormal); // % by value 
