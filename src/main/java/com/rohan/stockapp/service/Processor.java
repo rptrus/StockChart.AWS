@@ -46,6 +46,9 @@ public class Processor {
 	@Value("${filename}")
 	private String fileName;
 	
+	@Value("${bucket:noworriesmate}")
+	private String bucketName;
+	
 	@Autowired
 	private ObjectMapper objectmapper;
 	
@@ -151,7 +154,10 @@ public class Processor {
 	
 	private void constructChart(List<StockReportElement> stockElementList, String fullPathFilename) {
 		synchroniseCurrentPrices(stockElementList); // can remove this
-		chart.makePDFChart(stockElementList, fullPathFilename);
+		int size = stockElementList.size();
+		if ( size > 8 ) // we will silently excise more than 8 items
+		    stockElementList.subList(8, size).clear();
+		chart.makePDFChart(stockElementList, fullPathFilename, bucketName);
 	}
 	
 	// If we don't have a latest price, then what we will do is set it to the current price and flag an alert

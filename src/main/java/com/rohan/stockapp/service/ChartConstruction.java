@@ -102,7 +102,7 @@ public class ChartConstruction {
     Font bold = new Font(FontFamily.HELVETICA, 12, Font.BOLD);
     java.awt.Font smallVerdana = new java.awt.Font("Verdana", Font.NORMAL, 6);    
 	
-	public void makePDFChart(List<StockReportElement> stockElementList, String fullPathFilename) {
+	public void makePDFChart(List<StockReportElement> stockElementList, String fullPathFilename, String bucketName) {
 		  PdfWriter writer = null;
 		  Document document = new Document(PageSize.A4, marginLeft, marginRight, marginTop, marginBottom);
 		  
@@ -131,7 +131,7 @@ public class ChartConstruction {
               
               Random r = new Random(System.currentTimeMillis());
               String key = String.valueOf(r.nextInt(1000));
-              s3Service.uploadToS3(String.format("%s_%s", key, f.getName()), f);
+              s3Service.uploadToS3(bucketName, String.format("%s_%s", key, f.getName()), f);
               
               logger.info("Document now closed.");
         } catch (Exception ex) {
@@ -183,6 +183,15 @@ public class ChartConstruction {
         ((BarRenderer) subplot1.getRenderer()).setMaximumBarWidth(0.085f);
         renderer1.setSeriesPaint(0, new Color(ReportColors.COOLBLUE.getReportColor()));
         
+        CategoryItemLabelGenerator generator1 = new StandardCategoryItemLabelGenerator();
+        renderer1.setSeriesItemLabelGenerator(0, generator1);
+        renderer1.setSeriesItemLabelsVisible(0, true);
+        renderer1.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER,TextAnchor.BASELINE_CENTER));
+        //renderer2.setSeriesItemLabelFont(0, new java.awt.Font("Arial", 20, Font.BOLD), false);
+        //renderer2.setDefaultItemLabelFont(new java.awt.Font("Arial", 20, Font.BOLD));
+        renderer1.setItemLabelAnchorOffset(10);
+
+        
         final CategoryDataset dataset2 = createDatasetAmount(stockList);
         final NumberAxis rangeAxis2 = new NumberAxis("Holding Amt"); 
         rangeAxis2.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
@@ -200,15 +209,8 @@ public class ChartConstruction {
         domainAxis.setTickLabelFont(smallVerdana);
         renderer2.setSeriesPaint(0, new Color(ReportColors.GREEN.getReportColor()));
         
-        // new stuff
-//        renderer2.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-//        renderer2.setDefaultItemLabelsVisible(true);
-//        ItemLabelPosition position = new ItemLabelPosition(ItemLabelAnchor.INSIDE10, 
-//                TextAnchor.BASELINE_CENTER);
-//        renderer2.setDefaultNegativeItemLabelPosition(position);
-        
-        CategoryItemLabelGenerator generator = new StandardCategoryItemLabelGenerator();
-        renderer2.setSeriesItemLabelGenerator(0, generator);
+        CategoryItemLabelGenerator generator2 = new StandardCategoryItemLabelGenerator();
+        renderer2.setSeriesItemLabelGenerator(0, generator2);
         renderer2.setSeriesItemLabelsVisible(0, true);
         renderer2.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER,TextAnchor.BASELINE_CENTER));
         //renderer2.setSeriesItemLabelFont(0, new java.awt.Font("Arial", 20, Font.BOLD), false);

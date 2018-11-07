@@ -23,9 +23,9 @@ public class S3Service {
 	@Autowired
 	private AmazonClient amazonClient;
 		
-	public boolean uploadToS3(String key, File file) {
+	public boolean uploadToS3(String bucketname, String key, File file) {
 		boolean status = true;		
-		PutObjectResult putObjectResult = amazonClient.getS3client().putObject(new PutObjectRequest("stockchartapp", key, file)
+		PutObjectResult putObjectResult = amazonClient.getS3client().putObject(new PutObjectRequest(bucketname, key, file)
 		            .withCannedAcl(CannedAccessControlList.PublicRead));
 		logger.info("Created file with eTag {}",putObjectResult.getETag());
 		return status;
