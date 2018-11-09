@@ -22,10 +22,5 @@ public class StockappApplication extends SpringBootServletInitializer {
 	public static void main(String[] args) {
 		SpringApplication.run(StockappApplication.class, args);
 	}
-	
-	@PostConstruct
-	public void hello() {
-		System.out.println("HI");
-	}
-	
+		
 }

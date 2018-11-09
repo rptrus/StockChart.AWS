@@ -17,6 +17,9 @@ public class Status {
 	private String status;
 	@JsonProperty("comments")
 	private String comments;
+	@JsonProperty("url")
+	private String url;
+
 
 	/**
 	 * No args constructor for use in serialization
@@ -31,11 +34,12 @@ public class Status {
 	 * @param status
 	 * @param comments
 	 */
-	public Status(Integer count, String status, String comments) {
+	public Status(Integer count, String status, String comments, String url) {
 		super();
 		this.count = count;
 		this.status = status;
 		this.comments = comments;
+		this.url = url;
 	}
 
 	@JsonProperty("count")
@@ -82,16 +86,31 @@ public class Status {
 		this.comments = comments;
 		return this;
 	}
+	
+	@JsonProperty("url")
+	public String getUrl() {
+		return url;
+	}
+
+	@JsonProperty("url")
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	public Status withUrl(String url) {
+		this.url = url;
+		return this;
+	}
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this).append("count", count).append("status", status).append("comments", comments)
+		return new ToStringBuilder(this).append("count", count).append("status", status).append("comments", comments).append("url", url)
 				.toString();
 	}
 
 	@Override
 	public int hashCode() {
-		return new HashCodeBuilder().append(count).append(status).append(comments).toHashCode();
+		return new HashCodeBuilder().append(count).append(status).append(comments).append(url).toHashCode();
 	}
 
 	@Override

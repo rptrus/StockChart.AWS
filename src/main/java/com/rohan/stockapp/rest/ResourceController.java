@@ -59,7 +59,7 @@ public class ResourceController {
 	public ResponseEntity<Status> get(@RequestHeader("X-username") String username, @RequestHeader("X-password") String password) throws InterruptedException, ExecutionException {
 		Status status = new Status();
 		HttpStatus requestStatus = HttpStatus.OK;
-		int num = processor.getStockPortfolio(username, password);
+		processor.getStockPortfolio(status, username, password);
 		status.setComments("Processed request successfully");
 		return new ResponseEntity<Status>(status, requestStatus);
 	}
@@ -68,7 +68,7 @@ public class ResourceController {
 	@PostMapping(value="/add", consumes = "application/json", produces = "application/json")
 	public ResponseEntity<Status> add(@RequestHeader("X-username") String username, @RequestHeader("X-password") String password, @RequestBody String json) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		Status status = new Status();
-		boolean ok = processor.addStock(json, username, password);
+		boolean ok = processor.addStock(status, json, username, password);
 		HttpStatus requestStatus = HttpStatus.OK;
 		if (ok) {
 			status.setComments("Processed added stock");
@@ -93,8 +93,8 @@ public class ResourceController {
 			requestStatus =  HttpStatus.BAD_REQUEST;			
 		}
 		else {
-			int num = processor.addStockMulti(json, username, password);
-			status.setCount(num);
+			processor.addStockMulti(status, json, username, password);
+			status.setUrl(status.getUrl());
 			requestStatus =  HttpStatus.OK;
 		} 
 		System.out.println(json);
@@ -105,9 +105,9 @@ public class ResourceController {
 	public ResponseEntity<Status> modify(@RequestHeader("X-username") String username, @RequestHeader("X-password") String password, @RequestBody String json) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		Status status = new Status();
 		HttpStatus requestStatus = HttpStatus.OK;
-		int num = processor.addStockMulti(json, username, password);
-		status.setComments("Processed stock add request successfully");
-		status.setCount(num);
+		processor.addStockMulti(status, json, username, password);
+		status.setStatus(StatusFlags.SUCESS.name());
+		status.setComments("Processed stock add request successfully");		
 		System.out.println(json);
 		return new ResponseEntity<Status>(status, requestStatus);
 		
@@ -140,9 +140,8 @@ public class ResourceController {
 			holding.setPrice(theStock.getSameplePrice());
 			holdingSet.add(holding);
 		}
-		int num = processor.getStockPortfolio(username, password, holdingSet);		
+		processor.getStockPortfolio(status, username, password, holdingSet);		
 		status.setComments("Processed request successfully");
-		status.setCount(num);
 		return new ResponseEntity<Status>(status, requestStatus);
 	}
 	

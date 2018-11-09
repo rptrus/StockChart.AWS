@@ -3,8 +3,9 @@ package com.rohan.stockapp.service;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -58,6 +59,7 @@ import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.rohan.stockapp.dto.StockReportElement;
 import com.rohan.stockapp.enums.ReportColors;
+import com.rohan.stockapp.json.Status;
 import com.rohan.stockapp.service.s3.S3Service;
 
 @Component
@@ -102,16 +104,23 @@ public class ChartConstruction {
     Font bold = new Font(FontFamily.HELVETICA, 12, Font.BOLD);
     java.awt.Font smallVerdana = new java.awt.Font("Verdana", Font.NORMAL, 6);    
 	
-	public void makePDFChart(List<StockReportElement> stockElementList, String fullPathFilename, String bucketName) {
+	public void makePDFChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename, String bucketName) {
 		  PdfWriter writer = null;
 		  Document document = new Document(PageSize.A4, marginLeft, marginRight, marginTop, marginBottom);
 		  
 	      try {
+	    	  /*
 	    	  File f = new File(fullPathFilename);
 	    	  FileOutputStream fos = new FileOutputStream(f);
 	    	  writer = PdfWriter.getInstance(document, fos);
-	          document.open();
-	          addTransparentBackground(writer);
+	    	  */
+	    	  System.out.println("*105*");
+	    	  File f = new File(fullPathFilename);
+	    	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	    	  writer = PdfWriter.getInstance(document, baos);
+	    	  
+	          document.open();	          
+	          addTransparentBackgroundFromS3Bucket(writer);
 	          addEmptyLine(document,  1);
               
 	          Paragraph p = new Paragraph("Report Date:\t\t\t\t"+Utils.ddMMMyyyHHmm.format(Utils.getCurrentDate()), bold );
@@ -130,9 +139,12 @@ public class ChartConstruction {
               document.close();
               
               Random r = new Random(System.currentTimeMillis());
-              String key = String.valueOf(r.nextInt(1000));
-              s3Service.uploadToS3(bucketName, String.format("%s_%s", key, f.getName()), f);
-              
+              String randomdigits = String.valueOf(r.nextInt(1000));
+              byte[] data = baos.toByteArray();
+              long size = data.length;
+              String key = String.format("%s_%s", randomdigits, f.getName());
+              s3Service.uploadToS3(bucketName, key, new ByteArrayInputStream(data), size);
+              status.setUrl("https://s3.us-east-1.amazonaws.com/"+bucketName+"/"+key); // hardcoded for now. We won't ever move off N.Virginia as it has SES
               logger.info("Document now closed.");
         } catch (Exception ex) {
         	logger.error("Exception! ",ex);
@@ -155,9 +167,10 @@ public class ChartConstruction {
         contentByte0.addTemplate(templateLine0, pagePositionX, pagePositionY); // positioning on page
 	}
 	
-	private void addTransparentBackground(PdfWriter writer) throws MalformedURLException, IOException, DocumentException {
+	private void addTransparentBackgroundFromS3Bucket(PdfWriter writer) throws MalformedURLException, IOException, DocumentException {
         PdfContentByte canvas = writer.getDirectContentUnder();
-        Image bgimage = Image.getInstance(backgroundImageFile);
+        byte img[] = s3Service.readFromS3("noworriesmate", "ferny.JPG");
+        Image bgimage = Image.getInstance(img);
         bgimage.scaleAbsoluteHeight(850);
         bgimage.setAbsolutePosition(0, 0);
         canvas.saveState();
@@ -167,6 +180,7 @@ public class ChartConstruction {
         canvas.addImage(bgimage);
         canvas.restoreState();		
 	}
+
 	
 	private JFreeChart createPerformanceGraph(List<StockReportElement> stockList) {
         final CategoryDataset dataset1 = createDatasetPercentage(stockList);
@@ -177,9 +191,7 @@ public class ChartConstruction {
         final CategoryPlot subplot1 = new CategoryPlot(dataset1, null, rangeAxis1, renderer1);
         subplot1.setDomainGridlinesVisible(true);
         ValueAxis yAxis =subplot1.getRangeAxis();
-        //yAxis.setRange(0, 100);
         ((BarRenderer) subplot1.getRenderer()).setBarPainter(new StandardBarPainter());
-        //BarRenderer barrenderer1 = (BarRenderer)subplot1.getRenderer();
         ((BarRenderer) subplot1.getRenderer()).setMaximumBarWidth(0.085f);
         renderer1.setSeriesPaint(0, new Color(ReportColors.COOLBLUE.getReportColor()));
         
@@ -187,20 +199,16 @@ public class ChartConstruction {
         renderer1.setSeriesItemLabelGenerator(0, generator1);
         renderer1.setSeriesItemLabelsVisible(0, true);
         renderer1.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER,TextAnchor.BASELINE_CENTER));
-        //renderer2.setSeriesItemLabelFont(0, new java.awt.Font("Arial", 20, Font.BOLD), false);
-        //renderer2.setDefaultItemLabelFont(new java.awt.Font("Arial", 20, Font.BOLD));
         renderer1.setItemLabelAnchorOffset(10);
 
         
         final CategoryDataset dataset2 = createDatasetAmount(stockList);
         final NumberAxis rangeAxis2 = new NumberAxis("Holding Amt"); 
         rangeAxis2.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-        //rangeAxis2.setRange(0,500);
         final BarRenderer renderer2 = new BarRenderer();        
         final CategoryPlot subplot2 = new CategoryPlot(dataset2, null, rangeAxis2, renderer2);
         subplot2.setDomainGridlinesVisible(true);
         ((BarRenderer) subplot2.getRenderer()).setBarPainter(new StandardBarPainter());
-        //BarRenderer barrenderer2 = (BarRenderer)subplot2.getRenderer();
         ((BarRenderer) subplot2.getRenderer()).setMaximumBarWidth(0.085f);                
 
         final CategoryAxis domainAxis = new CategoryAxis("Stock Code");
@@ -213,8 +221,6 @@ public class ChartConstruction {
         renderer2.setSeriesItemLabelGenerator(0, generator2);
         renderer2.setSeriesItemLabelsVisible(0, true);
         renderer2.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER,TextAnchor.BASELINE_CENTER));
-        //renderer2.setSeriesItemLabelFont(0, new java.awt.Font("Arial", 20, Font.BOLD), false);
-        //renderer2.setDefaultItemLabelFont(new java.awt.Font("Arial", 20, Font.BOLD));
         renderer2.setItemLabelAnchorOffset(10);
         
         final CombinedDomainCategoryPlot plot = new  CombinedDomainCategoryPlot(domainAxis);
@@ -345,4 +351,5 @@ public class ChartConstruction {
 	          document.add(paragraph);
 	        }
 	    }
+	  
 }

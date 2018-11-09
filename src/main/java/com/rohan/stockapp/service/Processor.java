@@ -32,6 +32,7 @@ import com.rohan.stockapp.dto.StockReportElement;
 import com.rohan.stockapp.entity.Holding;
 import com.rohan.stockapp.entity.Quote;
 import com.rohan.stockapp.entity.User;
+import com.rohan.stockapp.json.Status;
 import com.rohan.stockapp.json.Stock;
 import com.rohan.stockapp.json.StockAdd;
 import com.rohan.stockapp.json.StockSet;
@@ -70,7 +71,7 @@ public class Processor {
 	@Autowired
 	private HoldingRepository holdingRepository;
 
-	public boolean addStock(String json, String username, String password) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
+	public boolean addStock(Status status, String json, String username, String password) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		StockAdd stockAdd = objectmapper.readValue(json, StockAdd.class);
 		User theUser = userService.getUser(username);
 		Set<Holding> userHoldings = userService.getUserHoldings(theUser); // A
@@ -88,11 +89,11 @@ public class Processor {
 		newHolding.setNumberOfUnits(stockAdd.getNumberOfUnits());
 		newHolding.setUser(theUser);
 		userHoldings.add(newHolding);
-		constructChart(toStockElementList(userHoldings, getLatestPrices(userHoldings)), fileName);
+		constructChart(status, toStockElementList(userHoldings, getLatestPrices(userHoldings)), fileName);
 		return true;
 	}
 	
-	public int addStockMulti(String json, String username, String password) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
+	public void addStockMulti(Status status, String json, String username, String password) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		int numberOfHoldings = 0;
 		StockSet stockSet = objectmapper.readValue(json, StockSet.class);
 		System.out.println(stockSet);
@@ -129,8 +130,8 @@ public class Processor {
 			}			
 		}
 		List<StockReportElement> stockElementList = toStockElementList(userHoldings, getLatestPrices(userHoldings));
-		constructChart(stockElementList, fileName);
-		return numberOfHoldings;
+		constructChart(status, stockElementList, fileName);
+		status.setCount(numberOfHoldings);		
 	}
 	
 	// We will rectify the DB elements (that have been sync'd by JSON together with the pulled stock prices  
@@ -152,12 +153,12 @@ public class Processor {
 		return userService.getUser(username) != null;
 	}
 	
-	private void constructChart(List<StockReportElement> stockElementList, String fullPathFilename) {
+	private void constructChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename) {
 		synchroniseCurrentPrices(stockElementList); // can remove this
 		int size = stockElementList.size();
 		if ( size > 8 ) // we will silently excise more than 8 items
 		    stockElementList.subList(8, size).clear();
-		chart.makePDFChart(stockElementList, fullPathFilename, bucketName);
+		chart.makePDFChart(status, stockElementList, fullPathFilename, bucketName);
 	}
 	
 	// If we don't have a latest price, then what we will do is set it to the current price and flag an alert
@@ -193,9 +194,18 @@ public class Processor {
 		holding2.setUser(user);
 		quote2.setHolding(holding2);
 		
+		// 3
+		Holding holding3 = new Holding(LocalDateTime.now(), LocalDateTime.now(), "JBH", new BigDecimal(16.99),20);
+		Quote quote3 = new Quote("JBH", new BigDecimal(20.99));
+		holding3.setQuote(quote3);
+		holding3.setUser(user);
+		quote3.setHolding(holding3);
+
+		
 		Set<Holding> stockSet = new HashSet<>();
 		stockSet.add(holding1);
 		stockSet.add(holding2);
+		stockSet.add(holding3);
 		user.setHoldings(stockSet);
 
 		userRepository.save(user);
@@ -218,11 +228,11 @@ public class Processor {
 		}
 	}
 	
-	public int getStockPortfolio(String username, String password) throws InterruptedException, ExecutionException {
-		return getStockPortfolio(username, password, null);
+	public void getStockPortfolio(Status status, String username, String password) throws InterruptedException, ExecutionException {
+		getStockPortfolio(status, username, password, null);
 	}
 
-	public int getStockPortfolio(String username, String password, Set<Holding> userHoldings) throws InterruptedException, ExecutionException {
+	public void getStockPortfolio(Status status, String username, String password, Set<Holding> userHoldings) throws InterruptedException, ExecutionException {
 		int num = 0; 
 		if (userHoldings == null) {
 			User theUser = userService.getUser(username);
@@ -230,8 +240,8 @@ public class Processor {
 		}
 		num = userHoldings.size();
 		List<StockReportElement> stockElementList = toStockElementList(userHoldings, getLatestPrices(userHoldings));
-		constructChart(stockElementList, fileName);
-		return num;
+		constructChart(status, stockElementList, fileName);
+		status.setCount(num);
 	}
 	
 	private Map<String, BigDecimal> getLatestPrices(Set<Holding> holdings) throws InterruptedException, ExecutionException {
