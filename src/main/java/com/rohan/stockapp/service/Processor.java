@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +97,7 @@ public class Processor {
 	public void addStockMulti(Status status, String json, String username, String password) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		int numberOfHoldings = 0;
 		StockSet stockSet = objectmapper.readValue(json, StockSet.class);
+		String email = stockSet.getComments();
 		System.out.println(stockSet);
 		User theUser = userService.getUser(username);
 		Set<Holding> userHoldings = userService.getUserHoldings(theUser);
@@ -130,7 +132,7 @@ public class Processor {
 			}			
 		}
 		List<StockReportElement> stockElementList = toStockElementList(userHoldings, getLatestPrices(userHoldings));
-		constructChart(status, stockElementList, fileName);
+		constructChart(status, stockElementList, fileName, email);
 		status.setCount(numberOfHoldings);		
 	}
 	
@@ -149,16 +151,23 @@ public class Processor {
 		return stockList;
 	}
 	
-	public boolean checkIfUserExists(String username) {
-		return userService.getUser(username) != null;
+	public boolean checkIfUserExists(String username, String password) {
+		User aUser = userService.getUser(username);
+		return (aUser != null && StringUtils.isNotEmpty(aUser.getPassword())
+				&&
+				aUser.getPassword().equals(Utils.md5Hash(password)));
 	}
 	
 	private void constructChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename) {
+		constructChart(status, stockElementList, fullPathFilename, "r.truscott@gmail.com"); // fix later
+	}
+	
+	private void constructChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename, String email) {
 		synchroniseCurrentPrices(stockElementList); // can remove this
 		int size = stockElementList.size();
 		if ( size > 8 ) // we will silently excise more than 8 items
 		    stockElementList.subList(8, size).clear();
-		chart.makePDFChart(status, stockElementList, fullPathFilename, bucketName);
+		chart.makePDFChart(status, stockElementList, fullPathFilename, bucketName, email);
 	}
 	
 	// If we don't have a latest price, then what we will do is set it to the current price and flag an alert
@@ -176,9 +185,9 @@ public class Processor {
 		
 		User user = new User();
 		user.setBio("The founding user");
-		user.setDateJoined(LocalDateTime.now());
+		user.setDateJoined(LocalDateTime.of(2018, 10, 1, 12, 0));
 		user.setUsername("rohan");
-		user.setPassword(Utils.md5Hash("password"));
+		user.setPassword(Utils.md5Hash("Pa55w0rd"));
 
 		// 1
 		Holding holding1 = new Holding(LocalDateTime.now(), LocalDateTime.now(), "VAS", new BigDecimal(1.23),10);
@@ -200,15 +209,23 @@ public class Processor {
 		holding3.setQuote(quote3);
 		holding3.setUser(user);
 		quote3.setHolding(holding3);
-
 		
 		Set<Holding> stockSet = new HashSet<>();
 		stockSet.add(holding1);
 		stockSet.add(holding2);
 		stockSet.add(holding3);
 		user.setHoldings(stockSet);
-
+		
 		userRepository.save(user);
+		
+		User user2 = new User();
+		user2.setBio("Test user");
+		user2.setDateJoined(LocalDateTime.of(2018, 11, 11, 12, 0));
+		user2.setUsername("testuser");
+		user2.setPassword(Utils.md5Hash("testpass"));
+		
+		userRepository.save(user2);
+
 	}
 	
 	@Transactional

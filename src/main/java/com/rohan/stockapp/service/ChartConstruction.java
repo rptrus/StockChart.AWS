@@ -10,10 +10,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.MalformedURLException;
+import java.net.URLEncoder;
 import java.text.ParseException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang.StringUtils;
 import org.jfree.chart.ChartColor;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -104,7 +107,7 @@ public class ChartConstruction {
     Font bold = new Font(FontFamily.HELVETICA, 12, Font.BOLD);
     java.awt.Font smallVerdana = new java.awt.Font("Verdana", Font.NORMAL, 6);    
 	
-	public void makePDFChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename, String bucketName) {
+	public void makePDFChart(Status status, List<StockReportElement> stockElementList, String fullPathFilename, String bucketName, String email) {
 		  PdfWriter writer = null;
 		  Document document = new Document(PageSize.A4, marginLeft, marginRight, marginTop, marginBottom);
 		  
@@ -114,7 +117,7 @@ public class ChartConstruction {
 	    	  FileOutputStream fos = new FileOutputStream(f);
 	    	  writer = PdfWriter.getInstance(document, fos);
 	    	  */
-	    	  System.out.println("*105*");
+	    	  System.out.println("*106*");
 	    	  File f = new File(fullPathFilename);
 	    	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	    	  writer = PdfWriter.getInstance(document, baos);
@@ -140,9 +143,10 @@ public class ChartConstruction {
               
               Random r = new Random(System.currentTimeMillis());
               String randomdigits = String.valueOf(r.nextInt(1000));
+              String emailEncoded = StringUtils.removeEnd(Base64.getEncoder().encodeToString(email.getBytes()),"=");
               byte[] data = baos.toByteArray();
               long size = data.length;
-              String key = String.format("%s_%s", randomdigits, f.getName());
+              String key = String.format("%s_%s_%s", emailEncoded, randomdigits, f.getName());
               s3Service.uploadToS3(bucketName, key, new ByteArrayInputStream(data), size);
               status.setUrl("https://s3.us-east-1.amazonaws.com/"+bucketName+"/"+key); // hardcoded for now. We won't ever move off N.Virginia as it has SES
               logger.info("Document now closed.");

@@ -86,7 +86,7 @@ public class ResourceController {
 		Status status = new Status();
 		HttpStatus requestStatus;
 		status.setComments("Processed stock add request successfully");
-		if (processor.checkIfUserExists(username)) {
+		if (processor.checkIfUserExists(username, password)) {
 			logger.error("The user already exists - must use PUT");
 			status.setComments("User already Exists - send a PUT request instead");
 			status.setStatus(StatusFlags.FAIL.name());
@@ -105,11 +105,16 @@ public class ResourceController {
 	public ResponseEntity<Status> modify(@RequestHeader("X-username") String username, @RequestHeader("X-password") String password, @RequestBody String json) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		Status status = new Status();
 		HttpStatus requestStatus = HttpStatus.OK;
-		processor.addStockMulti(status, json, username, password);
-		status.setStatus(StatusFlags.SUCESS.name());
-		status.setComments("Processed stock add request successfully");		
-		System.out.println(json);
-		return new ResponseEntity<Status>(status, requestStatus);
+		if (processor.checkIfUserExists(username, password)) {
+			processor.addStockMulti(status, json, username, password);
+			status.setStatus(StatusFlags.SUCESS.name());
+			status.setComments("Processed stock add request successfully");		
+			System.out.println(json);
+		} else {
+			status.setStatus(StatusFlags.FAIL.name());
+			status.setComments("Invalid user "+username+" or password");
+		}
+		return new ResponseEntity<Status>(status, requestStatus);		
 		
 	}
 	
@@ -123,7 +128,7 @@ public class ResourceController {
 		return new ResponseEntity<Status>(status, requestStatus);
 		
 	}
-	
+
 	@GetMapping(value="/random", produces = "application/json")
 	public ResponseEntity<Status> random(@RequestHeader("X-username") String username, @RequestHeader("X-password") String password, @RequestParam(value="howmany", required=true) String howMany) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		Status status = new Status();
