@@ -16,7 +16,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jfree.chart.ChartColor;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -112,13 +112,8 @@ public class ChartConstruction {
 		  Document document = new Document(PageSize.A4, marginLeft, marginRight, marginTop, marginBottom);
 		  
 	      try {
-	    	  /*
-	    	  File f = new File(fullPathFilename);
-	    	  FileOutputStream fos = new FileOutputStream(f);
-	    	  writer = PdfWriter.getInstance(document, fos);
-	    	  */
 	    	  System.out.println("*106*");
-	    	  File f = new File(fullPathFilename);
+	    	  File f = new File(fullPathFilename); // only used for the name, we don't write the file on AWS
 	    	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	    	  writer = PdfWriter.getInstance(document, baos);
 	    	  

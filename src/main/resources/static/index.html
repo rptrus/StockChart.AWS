@@ -1,25 +1,64 @@
 
 <html>
 <head>
-<title>My POC demo</title>
+<title>StockChart AWS Demo</title>
 </head>
 <body>
 <div style="margin: 0 auto; background-color: #eeeeee; border: 1px darkgray dashed">
 <div style="margin-left: 50px; margin-top: 30px">
-<h2>Stockchart demo page</h2>
+<h2>Stockchart Demo Page</h2>
 <P>
-<form method="GET" action="doRequest">
-Combo box
+<form method="GET">
 <p>
-<select name="percentage">
-<option value="5">5%</option>
-<option value="25">25%</option>
-<option value="50">50%</option>
-<option value="75">75%</option>
-<option value="100">100%</option>
-</select>
+Send your ReST form to the following address:
+<P>
+<pre><code>http://stockchartaws-env.nkp696mepp.us-east-1.elasticbeanstalk.com/addmulti</code></pre>
 <p>
-<button>Press to Start</button>
+Format a JSON message as a <B>PUT</B> request: 
+<P>
+<pre>
+<code>
+{
+"stocks" : [
+	{
+	"stock":"A2M",
+	"dateAdded" : "2018-10-20T13:23:43.533Z",
+	"price" : 8.44,
+	"numberOfUnits": 15
+	},
+	{
+	"stock":"ABC",
+	"dateAdded" : "2018-10-20T13:23:43.533Z",
+	"price" : 2.43,
+	"numberOfUnits": 22
+	},
+	{
+	"stock":"AGL",
+	"dateAdded" : "2018-10-20T13:23:43.533Z",
+	"price" : 7.13,
+	"numberOfUnits": 10
+	},
+	{
+	"stock":"ALL",
+	"dateAdded" : "2018-03-11T13:23:43.533Z",
+	"price" : 24.44,
+	"numberOfUnits": 1
+	}
+	],
+	"comments" : "stockchart@sharklasers.com"
+}
+</code>
+</pre>
+<P><P>
+<b>Notes:</b>
+<P>
+The comments element is an email address for returned PDF. The email address has to be pre-registered with Amazon SES.<BR> 
+This email address can be used for testing: stockchart@sharklasers.com<BR>
+The inbox can be viewed by browsing to https://www.guerrillamail.com and choosing the 'stockchart' inbox.<BR> 
+<p>
+There is a limit of 10 stocks that can be added for a single PDF page report.
+<P>  
+<button>Thanks for coming</button>
 </form>
 </div>
 </div>
