@@ -8,13 +8,15 @@ import org.springframework.stereotype.Service;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
 @Service
 public class AmazonClient {
 	
-	private AmazonS3 s3client;
+	private AmazonS3 s3Client;
 
     @Value("${amazonProperties.endpointUrl}")
     private String endpointUrl;
@@ -24,19 +26,24 @@ public class AmazonClient {
     private String accessKey;
     //@Value("${amazonProperties.secretKey}")
     //private String secretKey;
+	@Value("${amazonProperties.region:us-east-1:us-east-1}")
+	private String region;    
     
     @PostConstruct
     public void initializeAmazon() {
-       AWSCredentials credentials = new BasicAWSCredentials(this.accessKey, System.getenv("SECRET_KEY"));
-       this.setS3client(new AmazonS3Client(credentials)); // fix later
+    	// Must set the environment variables within AWS ELB
+		s3Client = AmazonS3ClientBuilder.standard()
+                .withRegion(Regions.fromName(region))
+                .build();
+	
     }
 
 	public AmazonS3 getS3client() {
-		return s3client;
+		return s3Client;
 	}
 
 	public void setS3client(AmazonS3 s3client) {
-		this.s3client = s3client;
+		this.s3Client = s3client;
 	} 
 
 }
